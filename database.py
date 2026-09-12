@@ -29,6 +29,7 @@ class Database:
                 data_iscrizione_albo TEXT, cassa_appartenenza TEXT,
                 attiva_rivalsa BOOLEAN DEFAULT 0, perc_rivalsa REAL DEFAULT 4.0,
                 attiva_cassa BOOLEAN DEFAULT 0, perc_cassa REAL DEFAULT 0.0, desc_cassa TEXT,
+                lavoratore_spettacolo BOOLEAN DEFAULT 0,
                 codice_sdi TEXT DEFAULT '0000000',
                 albo_professionale TEXT,
                 iban TEXT
@@ -63,6 +64,7 @@ class Database:
             "data_iscrizione_albo": "data_iscrizione_albo TEXT",
             "albo_professionale": "albo_professionale TEXT",
             "iban": "iban TEXT",
+            "lavoratore_spettacolo": "lavoratore_spettacolo BOOLEAN DEFAULT 0",
         })
         self._colonne_mancanti("clienti", {"numero_civico": "numero_civico TEXT"})
         self.conn.commit()
@@ -70,8 +72,8 @@ class Database:
     def inizializza_dati_base(self):
         if self.cursor.execute("SELECT COUNT(*) FROM azienda").fetchone()[0] == 0:
             self.cursor.execute("""
-                INSERT INTO azienda (id, denominazione, nome, cognome, piva, codice_fiscale)
-                VALUES (1, 'La Tua Attività', 'Mario', 'Rossi', 'IT12345678901', 'RSSMRA80A01H501U')
+                INSERT INTO azienda (id, denominazione, nome, cognome, piva, codice_fiscale, lavoratore_spettacolo)
+                VALUES (1, 'La Tua Attività', 'Mario', 'Rossi', 'IT12345678901', 'RSSMRA80A01H501U', 0)
             """)
         if self.cursor.execute("SELECT COUNT(*) FROM archivio_servizi").fetchone()[0] == 0:
             self.cursor.executemany(
@@ -95,7 +97,7 @@ class Database:
             cap=?, comune=?, provincia=?, piva=?, codice_fiscale=?, tipo_professionista=?,
             titolo=?, numero_albo=?, provincia_albo=?, data_iscrizione_albo=?, cassa_appartenenza=?,
             attiva_rivalsa=?, perc_rivalsa=?, attiva_cassa=?, perc_cassa=?, desc_cassa=?,
-            codice_sdi=?, albo_professionale=?, iban=? WHERE id=1
+            lavoratore_spettacolo=?, codice_sdi=?, albo_professionale=?, iban=? WHERE id=1
         """, dati)
         self.conn.commit()
 
@@ -195,7 +197,7 @@ class Database:
     def get_storico_fatture(self):
         return self.cursor.execute("""
             SELECT f.id, f.numero, f.data, c.denominazione, c.nome, c.cognome,
-                   f.totale_documento, f.file_xml, f.inviata, f.file_pdf
+                    f.totale_documento, f.file_xml, f.inviata, f.file_pdf
             FROM fatture f JOIN clienti c ON f.cliente_id = c.id
             ORDER BY f.data ASC
         """).fetchall()
@@ -203,8 +205,8 @@ class Database:
     def get_storico_fatture_completo(self):
         return self.cursor.execute("""
             SELECT f.id, f.numero, f.data, c.denominazione, f.imponibile_competenza,
-                   f.importo_rivalsa, f.importo_cassa, f.importo_bollo, f.totale_documento,
-                   f.file_xml, f.file_pdf, f.inviata, c.codice_fiscale, c.nome, c.cognome
+                    f.importo_rivalsa, f.importo_cassa, f.importo_bollo, f.totale_documento,
+                    f.file_xml, f.file_pdf, f.inviata, c.codice_fiscale, c.nome, c.cognome
             FROM fatture f JOIN clienti c ON f.cliente_id = c.id
             ORDER BY f.data ASC
         """).fetchall()
@@ -234,13 +236,18 @@ class Database:
         if existing:
             return False, f"Esiste già una fattura con il numero {numero}."
 
-        row = self.cursor.execute(
-            "SELECT MAX(CAST(numero AS INTEGER)) FROM fatture WHERE id != ?",
-            (escludi,),
-        ).fetchone()
-        max_num = row[0] if row else None
-        if max_num is not None and numero_int <= max_num:
-            return False, f"Il numero {numero} è inferiore o uguale alla fattura esistente {max_num}."
+        # Only enforce sequential numbering rules for new invoices (when not editing)
+        if escludi_id is None:
+            row = self.cursor.execute(
+                "SELECT MAX(CAST(numero AS INTEGER)) FROM fatture WHERE id != ?",
+                (escludi,),
+            ).fetchone()
+            max_num = row[0] if row else None
+            if max_num is not None:
+                if numero_int <= max_num:
+                    return False, f"Il numero {numero} è inferiore o uguale alla fattura esistente {max_num}."
+                if numero_int > max_num + 1:
+                    return False, f"Il numero {numero} deve essere esattamente il successivo alla fattura esistente {max_num}."
         return True, None
 
     def verifica_data_fattura(self, data, numero=None, escludi_id=None):

@@ -64,6 +64,10 @@ CASSA_PREVIDENZIALE = {
         "nome": "INPS",
         "tipo": "TC22",
     },
+    "professione_spettacolo": {
+        "nome": "Ente Nazionale Previdenza e Assistenza Lavoratori Spettacolo e Sport",
+        "tipo": "TC20",
+    },
 }
 
 MAPPA_PROFESSIONI = {
@@ -82,6 +86,7 @@ MAPPA_PROFESSIONI = {
     "Geologo": "geologo",
     "Biologo": "biologo",
     "Guida Alpina": "guida_alpina",
+    "Professionista dello Spettacolo": "professione_spettacolo",
 }
 
 
@@ -193,6 +198,16 @@ class Generatore:
             dbollo = _el(dgd, "DatiBollo")
             _el(dbollo, "BolloVirtuale", "SI")
             _el(dbollo, "ImportoBollo", _euro(dati["bollo"]))
+
+        def _blocco_ritenuta(codice, aliquota, importo):
+            dr = _el(dgd, "DatiRitenuta")
+            _el(dr, "TipoRitenuta", codice)
+            _el(dr, "AliquotaRitenuta", _euro(aliquota))
+            _el(dr, "ImportoRitenuta", _euro(importo))
+            _el(dr, "CausalePagamento", "A")
+
+        if dati.get("ritenuta", 0) > 0:
+            _blocco_ritenuta("RT03", dati.get("aliquota_ritenuta", 9.19), dati["ritenuta"])
 
         def _blocco_cassa(tipo, perc, importo):
             dcp = _el(dgd, "DatiCassaPrevidenziale")
@@ -330,6 +345,8 @@ class Generatore:
             pdf.ln()
 
         riga_totale("Imponibile Competenza:", dati["imponibile_competenza"])
+        if dati.get("ritenuta", 0) > 0:
+            riga_totale(f"Ritenuta INPS ({str(dati.get('aliquota_ritenuta', 9.19)).replace('.', ',')}%):", dati["ritenuta"])
         if dati["rivalsa"] > 0:
             riga_totale(f"Rivalsa INPS ({dati['perc_rivalsa']}%):", dati["rivalsa"])
         if dati["cassa_albo"] > 0:
@@ -341,7 +358,7 @@ class Generatore:
             pdf.cell(180, 4, "MEF 17 GIUGNO 2014 (ART. 6)", 0, 1, "C")
             pdf.ln(2)
 
-        totale_senza_bollo = dati["imponibile_competenza"] + dati["rivalsa"] + dati["cassa_albo"]
+        totale_senza_bollo = dati["imponibile_competenza"] - dati.get("ritenuta", 0)
         pdf.set_font("Arial", "B", 14)
         pdf.cell(145, 10, "TOTALE:", 0, 0, "R")
         pdf.cell(35, 10, f"Euro {_euro(totale_senza_bollo)}", 0, 0, "R")

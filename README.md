@@ -1,6 +1,6 @@
 # Gestionale Fatture Elettroniche - Regime Forfettario
 
-Applicazione desktop per generare fatture elettroniche in formato XML pronte per essere inviate all'Agenzia delle Entrate. Non utilizza il sistema SDI. Solo  per professionisti in regime forfettario. Genera anche file PDF.
+Applicazione desktop, creata con AI, per generare fatture elettroniche in formato XML pronte per essere inviate all'Agenzia delle Entrate. Non utilizza il sistema SDI. Solo  per professionisti in regime forfettario. Genera anche file PDF.
 
 ## Avvio
 
