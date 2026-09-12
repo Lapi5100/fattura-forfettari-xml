@@ -153,11 +153,12 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.e_az_prov, 3, 3)
 
         self.e_az_titolo = QLineEdit(self._az("titolo"))
+        self.lbl_titolo = QLabel("Titolo:")
         self.lbl_albo_prof = QLabel("Albo Professionale:")
         self.e_albo_prof = QLineEdit(str(self._az("albo_professionale")))
         self.lbl_prov_albo = QLabel("Prov. Albo:")
         self.e_prov_albo = QLineEdit(self._az("provincia_albo"))
-        layout.addWidget(QLabel("Titolo:"), 4, 0)
+        layout.addWidget(self.lbl_titolo, 4, 0)
         layout.addWidget(self.e_az_titolo, 4, 1)
         layout.addWidget(self.lbl_albo_prof, 4, 2)
         layout.addWidget(self.e_albo_prof, 4, 3)
@@ -191,6 +192,11 @@ class MainWindow(QMainWindow):
         self.var_rivalsa.setChecked(bool(self._az("attiva_rivalsa", 0)))
         layout.addWidget(self.var_rivalsa, 7, 0, 1, 3)
 
+        self.var_lavoratore_spettacolo = QCheckBox("Lavoratore dello Spettacolo")
+        self.var_lavoratore_spettacolo.setChecked(bool(self._az("lavoratore_spettacolo", 0)))
+        self.var_lavoratore_spettacolo.stateChanged.connect(self._aggiorna_stato_campi_professione)
+        layout.addWidget(self.var_lavoratore_spettacolo, 7, 3, 1, 3)
+
         self.var_bollo_al_totale = QCheckBox("Aggiungi Bollo al Totale")
         self.var_bollo_al_totale.setChecked(False)
         self.var_bollo_al_totale.stateChanged.connect(self._aggiorna_label_totali)
@@ -215,13 +221,75 @@ class MainWindow(QMainWindow):
         self._aggiorna_stato_campi_professione()
 
     def _aggiorna_stato_campi_professione(self):
-        ha_valore = bool(self.cb_tipo_prof.currentText())
-        for widget in (
+        # Quando è selezionato "Lavoratore dello Spettacolo", nascondiamo i campi professionali
+        # poiché i lavoratori dello spettacolo non hanno questi campi
+        is_spettacolo = self.var_lavoratore_spettacolo.isChecked()
+        print(f"_aggiorna_stato_campi_professione called, is_spettacolo={is_spettacolo}")
+
+        # Blocco temporaneamente i segnali per evitare eventi indesiderati durante il cambio di visibilità
+        widgets_to_manage = (
             self.e_albo_prof, self.lbl_albo_prof, self.e_prov_albo, self.lbl_prov_albo,
             self.e_data_iscr_albo, self.lbl_data_iscr_albo, self.e_num_albo, self.lbl_num_albo,
             self.e_cassa_app, self.lbl_cassa_app, self.e_cassa_perc, self.lbl_cassa_perc,
-        ):
-            widget.setEnabled(ha_valore)
+            self.e_az_titolo, self.lbl_titolo,
+        )
+        
+        # Blocco i segnali su tutti i widget
+        for widget in widgets_to_manage:
+            widget.blockSignals(True)
+
+        try:
+            # Gestiamo la visibilità dei campi professionali
+            if is_spettacolo:
+                print("Hiding professional fields")
+                self.e_albo_prof.hide()
+                self.lbl_albo_prof.hide()
+                self.e_prov_albo.hide()
+                self.lbl_prov_albo.hide()
+                self.e_data_iscr_albo.hide()
+                self.lbl_data_iscr_albo.hide()
+                self.e_num_albo.hide()
+                self.lbl_num_albo.hide()
+                self.e_cassa_app.hide()
+                self.lbl_cassa_app.hide()
+                self.e_cassa_perc.hide()
+                self.lbl_cassa_perc.hide()
+                self.e_az_titolo.hide()
+                self.lbl_titolo.hide()
+            else:
+                print("Showing professional fields")
+                self.e_albo_prof.show()
+                self.lbl_albo_prof.show()
+                self.e_prov_albo.show()
+                self.lbl_prov_albo.show()
+                self.e_data_iscr_albo.show()
+                self.lbl_data_iscr_albo.show()
+                self.e_num_albo.show()
+                self.lbl_num_albo.show()
+                self.e_cassa_app.show()
+                self.lbl_cassa_app.show()
+                self.e_cassa_perc.show()
+                self.lbl_cassa_perc.show()
+                self.e_az_titolo.show()
+                self.lbl_titolo.show()
+                # Forziamo l'aggiornamento del layout per evitare problemi di rendering
+                self.updateGeometry()
+                # Also update the parent widget's layout to ensure proper recalculation
+                parent = self.e_albo_prof.parent()
+                if parent:
+                    parent.update()
+                    parent.updateGeometry()
+                print("Geometry updated")
+        finally:
+            # Ripristino i segnali su tutti i widget
+            for widget in widgets_to_manage:
+                widget.blockSignals(False)
+
+        # Anche la rivalsa viene disabilitata quando è attivo lo spettacolo
+        # poiché per i lavoratori dello spettacolo non si applica la rivalsa INPS
+        self.var_rivalsa.setEnabled(not is_spettacolo)
+        if is_spettacolo:
+            self.var_rivalsa.setChecked(False)
 
     def _get_fattura_selezionata(self):
         row = self.table_archivio.currentRow()
@@ -229,11 +297,23 @@ class MainWindow(QMainWindow):
             return None
         return self._storico[row]
 
+    def _get_most_recent_invoice_date_excluding_self(self, exclude_id=None):
+        """Get the date of the most recent invoice, optionally excluding one."""
+        if exclude_id is not None:
+            row = self.db.cursor.execute(
+                "SELECT MAX(data) FROM fatture WHERE id != ?", (exclude_id,)
+            ).fetchone()
+        else:
+            row = self.db.cursor.execute(
+                "SELECT MAX(data) FROM fatture"
+            ).fetchone()
+        return row[0] if row and row[0] else None
+
     def _ensure_cartella_fatture(self):
         os.makedirs(CARTELLA_FATTURE, exist_ok=True)
 
-    def _build_dati_xml(self, cliente, numero, data_oggi, imp_comp, rivalsa, cassa, bollo, totale, cassa_perc):
-        return {
+    def _build_dati_xml(self, cliente, numero, data_oggi, imp_comp, rivalsa, ritenuta, cassa, bollo, totale, cassa_perc):
+        dati = {
             "cedente_denominazione": str(self._az("denominazione") or f"{self._az('nome')} {self._az('cognome')}"),
             "cedente_nome": str(self._az("nome")),
             "cedente_cognome": str(self._az("cognome")),
@@ -279,6 +359,14 @@ class MainWindow(QMainWindow):
             "totale_documento": totale,
             "natura_riepilogo": self.righe_fattura[0]["natura"] if self.righe_fattura else "N2.2",
         }
+
+        # Aggiungi i dati della ritenuta se presente
+        if ritenuta > 0:
+            dati["ritenuta"] = ritenuta
+            dati["codice_ritenuta"] = "RT03"
+            dati["aliquota_ritenuta"] = 9.19
+
+        return dati
 
     def _salva_file_fattura(self, dati_xml, file_xml, file_pdf):
         with open(file_xml, "wb") as f:
@@ -436,13 +524,18 @@ class MainWindow(QMainWindow):
         ultima = self.db.get_ultima_fattura()
         if ultima:
             try:
-                self.e_numero_fattura.setText(str(int(ultima[0]) + 1))
+                numero_suggerito = str(int(ultima[0]) + 1)
+                self.e_numero_fattura.setText(numero_suggerito)
+                self.e_numero_fattura.setReadOnly(True)
             except ValueError:
                 self.e_numero_fattura.setText("1")
+                self.e_numero_fattura.setReadOnly(True)
         else:
             self.e_numero_fattura.setText("1")
+            self.e_numero_fattura.setReadOnly(True)
 
-        self.e_data_fattura.setDate(datetime.date.today())
+        # Do not set date automatically - user can choose any date >= last invoice date
+        # self.e_data_fattura.setDate(datetime.date.today())  # REMOVED
         self.imposta_limiti_data()
 
         ultimo_cliente = self.db.get_ultimo_cliente_fatturato()
@@ -452,18 +545,25 @@ class MainWindow(QMainWindow):
                 self.combo_clienti.setCurrentIndex(idx)
                 self.mostra_dati_cliente()
 
-    def imposta_limiti_data(self):
-        data_max = datetime.date.today()
-        data_min = data_max - datetime.timedelta(days=12)
-        ultima = self.db.get_ultima_fattura()
-        if ultima:
+    def imposta_limiti_data(self, escludi_id=None):
+        # Get the most recent invoice date, optionally excluding one
+        if escludi_id is not None:
+            row = self.db.cursor.execute(
+                "SELECT MAX(data) FROM fatture WHERE id != ?", (escludi_id,)
+            ).fetchone()
+        else:
+            row = self.db.cursor.execute(
+                "SELECT MAX(data) FROM fatture"
+            ).fetchone()
+        if row and row[0]:
             try:
-                data_ultima = datetime.datetime.strptime(ultima[1], "%Y-%m-%d").date()
-                data_min = max(data_min, data_ultima)
+                data_min = datetime.datetime.strptime(row[0], "%Y-%m-%d").date()
             except ValueError:
-                pass
+                data_min = datetime.date.today() - datetime.timedelta(days=12*365)  # Far past as fallback
+        else:
+            data_min = datetime.date.today() - datetime.timedelta(days=12*365)  # Far past as fallback
         self.e_data_fattura.setMinimumDate(QDate.fromString(data_min.isoformat(), "yyyy-MM-dd"))
-        self.e_data_fattura.setMaximumDate(QDate.fromString(data_max.isoformat(), "yyyy-MM-dd"))
+        # No maximum date restriction - user can select any date >= minimum date
 
     def aggiorna_combo_clienti(self):
         self.clienti_db = self.db.get_clienti()
@@ -586,7 +686,13 @@ class MainWindow(QMainWindow):
     def _aggiorna_label_totali(self):
         self.calcola_totali_e_aggiorna_label()
 
+    def is_lavoratore_spettacolo(self):
+        return self.var_lavoratore_spettacolo.isChecked()
+
     def _perc_cassa(self):
+        # Se è un lavoratore dello spettacolo, la percentuale cassa è sempre 0
+        if self.is_lavoratore_spettacolo():
+            return 0.0
         try:
             return float(self.e_cassa_perc.text() or 0)
         except ValueError:
@@ -596,18 +702,35 @@ class MainWindow(QMainWindow):
         if imponibile_lordo is None:
             imponibile_lordo = sum(r["totale"] for r in self.righe_fattura)
         imp_competenza = imponibile_lordo
-        rivalsa = imp_competenza * 0.04 if self.var_rivalsa.isChecked() else 0
-        cassa_perc = self._perc_cassa()
-        cassa = imp_competenza * (cassa_perc / 100.0) if cassa_perc > 0 else 0
+
+        # Se è lavoratore dello spettacolo, non si applica rivalsa e si applica ritenuta RT03
+        if self.is_lavoratore_spettacolo():
+            rivalsa = 0.0
+            ritenuta = imp_competenza * 0.0919  # 9,19%
+            cassa = 0.0
+        else:
+            rivalsa = imp_competenza * 0.04 if self.var_rivalsa.isChecked() else 0
+            ritenuta = 0.0
+            cassa_perc = self._perc_cassa()
+            cassa = imp_competenza * (cassa_perc / 100.0) if cassa_perc > 0 else 0
+
         bollo = 2.0 if imp_competenza > 77.47 else 0.0
-        totale = imp_competenza + rivalsa + cassa
+        totale = imp_competenza + rivalsa - ritenuta + cassa
         if self.var_bollo_al_totale.isChecked():
             totale += bollo
-        self.lbl_totali.setText(
-            f"Imp.Competenza: {imp_competenza:.2f} | Rivalsa: {rivalsa:.2f} | "
-            f"Cassa: {cassa:.2f} | Bollo: {bollo:.2f} | TOTALE: {totale:.2f} EUR"
-        )
-        return imp_competenza, rivalsa, cassa, bollo, totale
+
+        # Aggiornamento dell'etichetta con ritenuta se applicabile
+        if self.is_lavoratore_spettacolo():
+            self.lbl_totali.setText(
+                f"Imp.Competenza: {imp_competenza:.2f} | Rivalsa: {rivalsa:.2f} | "
+                f"Ritenuta RT03: {ritenuta:.2f} | Cassa: {cassa:.2f} | Bollo: {bollo:.2f} | TOTALE: {totale:.2f} EUR"
+            )
+        else:
+            self.lbl_totali.setText(
+                f"Imp.Competenza: {imp_competenza:.2f} | Rivalsa: {rivalsa:.2f} | "
+                f"Cassa: {cassa:.2f} | Bollo: {bollo:.2f} | TOTALE: {totale:.2f} EUR"
+            )
+        return imp_competenza, rivalsa, ritenuta, cassa, bollo, totale
 
     def salva_config(self):
         cassa_perc = self._perc_cassa()
@@ -621,6 +744,7 @@ class MainWindow(QMainWindow):
             self.e_data_iscr_albo.text(), self.e_cassa_app.text(),
             1 if self.var_rivalsa.isChecked() else 0, 4.0,
             1 if cassa_perc > 0 else 0, cassa_perc, "Contributo Cassa",
+            1 if self.var_lavoratore_spettacolo.isChecked() else 0,
             "0000000", self.e_albo_prof.text(), self.e_iban.text(),
         )
         self.db.update_azienda(dati)
@@ -769,8 +893,8 @@ class MainWindow(QMainWindow):
         numero, data, cliente_id = risultato["numero"], risultato["data"], risultato["cliente_id"]
         try:
             self.e_numero_fattura.setText(str(numero))
-            self.e_data_fattura.setMinimumDate(QDate(1, 1, 1))
-            self.e_data_fattura.setMaximumDate(QDate.currentDate())
+            # Set date limits that allow modification to any date >= most recent invoice (excluding self)
+            self.imposta_limiti_data(escludi_id=fattura_id)
             self.e_data_fattura.setDate(QDate.fromString(data, "yyyy-MM-dd"))
             idx = self.combo_clienti.findData(cliente_id)
             if idx >= 0:
@@ -801,7 +925,7 @@ class MainWindow(QMainWindow):
         cliente = self._cliente_corrente()
         if not cliente:
             return None
-        imp_comp, rivalsa, cassa, bollo, totale = self.calcola_totali_e_aggiorna_label()
+        imp_comp, rivalsa, ritenuta, cassa, bollo, totale = self.calcola_totali_e_aggiorna_label()
         numero = self.e_numero_fattura.text()
         data_oggi = self.e_data_fattura.date().toString("yyyy-MM-dd")
         valido, messaggio = self.db.verifica_numero_fattura(numero, escludi_id=escludi_id)
@@ -817,9 +941,9 @@ class MainWindow(QMainWindow):
             "cliente_id": cliente[0],
             "numero": numero,
             "data": data_oggi,
-            "totali": (imp_comp, rivalsa, cassa, bollo, totale),
+            "totali": (imp_comp, rivalsa, ritenuta, cassa, bollo, totale),
             "dati_xml": self._build_dati_xml(
-                cliente, numero, data_oggi, imp_comp, rivalsa, cassa, bollo, totale, cassa_perc
+                cliente, numero, data_oggi, imp_comp, rivalsa, ritenuta, cassa, bollo, totale, cassa_perc
             ),
         }
 
@@ -848,7 +972,7 @@ class MainWindow(QMainWindow):
         file_xml, file_pdf = self._percorsi_fattura(prep["numero"], prep["data"])
         try:
             self._salva_file_fattura(prep["dati_xml"], file_xml, file_pdf)
-            imp_comp, rivalsa, cassa, bollo, totale = prep["totali"]
+            imp_comp, rivalsa, ritenuta, cassa, bollo, totale = prep["totali"]
             self.db.salva_fattura((
                 prep["numero"], prep["data"], prep["cliente_id"],
                 imp_comp, rivalsa, cassa, bollo, totale, file_xml, file_pdf,
@@ -871,7 +995,7 @@ class MainWindow(QMainWindow):
         file_xml, file_pdf = self._percorsi_fattura(prep["numero"], prep["data"], riusa_esistenti=True)
         try:
             self._salva_file_fattura(prep["dati_xml"], file_xml, file_pdf)
-            imp_comp, rivalsa, cassa, bollo, totale = prep["totali"]
+            imp_comp, rivalsa, ritenuta, cassa, bollo, totale = prep["totali"]
             self.db.aggiorna_fattura(
                 self.fattura_in_modifica,
                 (prep["numero"], prep["data"], prep["cliente_id"],
