@@ -70,6 +70,8 @@ HERE=${SELF%/*}
 # Imposta i percorsi per le librerie
 export PATH="${HERE}:${PATH}"
 export LD_LIBRARY_PATH="${HERE}:${LD_LIBRARY_PATH}"
+# Force Qt to use Xcb platform (X11) instead of Wayland
+export QT_QPA_PLATFORM=xcb
 
 # Crea database se non esiste nella directory di lavoro
 if [ ! -f "gestionale_forfettario_qt.sqlite" ]; then

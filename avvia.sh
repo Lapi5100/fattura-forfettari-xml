@@ -3,6 +3,9 @@
 
 cd "$(dirname "$0")"
 
+# Force Qt to use Xcb platform (X11) instead of Wayland
+export QT_QPA_PLATFORM=xcb
+
 # Controlla se il virtual environment esiste
 if [ ! -d "venv" ]; then
     echo "Virtual environment non trovato. Creazione in corso..."
