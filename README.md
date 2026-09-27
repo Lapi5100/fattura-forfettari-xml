@@ -1,32 +1,14 @@
 # Gestionale Fatture Elettroniche - Regime Forfettario
 
-Applicazione desktop, creata con AI, per generare fatture elettroniche in formato XML pronte per essere inviate all'Agenzia delle Entrate. Non utilizza il sistema SDI. Solo  per professionisti in regime forfettario. Genera anche file PDF.
+Questa è una applicazione desktop, creata con AI, nata per gestire le mie fatture elettroniche nella maniera semplice e veloce, è in fase di sviluppo e può contenere errori. 
 
-## Avvio
+L'applicazione generara fatture elettroniche in formato PDF e XML pronte per essere inviate all'Agenzia delle Entrate. Non utilizza il sistema SDI. Solo per professionisti in regime forfettario. Genera fatture per gli autonomi dello spettacolo con contribuzione exENPALS. 
 
-Puoi avviare l'applicazione in due modi:
+Per windows scarica la cartella zip e scompattala dove vuoi. Avvia l'eseguibile per lanciare il programma.
 
-### 1. Utilizzando lo script di avvio (consigliato)
-```bash
-./avvia.sh
-```
+Per linux scaricare l'eseguibile appimage per qualsiasi distribuzione.
 
-### 2. Avvio manuale (rigenerando prima l'ambiente virtuale)
-Se preferisci gestire manualmente l'ambiente virtuale, oppure se hai bisogno di rigenerarlo (ad esempio dopo aver modificato le dipendenze), puoi utilizzare lo script dedicato:
 
-```bash
-./setup_venv.sh
-source venv/bin/activate
-python main.py
-```
-
-In alternativa, puoi seguire questi passi manualmente:
-```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python main.py
-```
 
 ## Struttura
 
@@ -40,5 +22,5 @@ tests/                  Test pytest
 Fatture/                XML e PDF generati
 ```
 
-L'XML non è firmato. Per l'invio del file bisogna accedere con SPID nel sito dell'Agenzia delle Entrate nell'area relativa alla fatturazione elettranica:   https://ivaservizi.agenziaentrate.gov.it/ser/fatturewizard/#/home  Importare il file xml verifacare il contenuto ed inviarlo.
+L'XML viene creato senza firma. Per l'invio del file bisogna accedere con SPID nel sito dell'Agenzia delle Entrate nell'area relativa alla fatturazione elettranica:   https://ivaservizi.agenziaentrate.gov.it/ser/fatturewizard/#/home  Importare il file xml, verifacare il contenuto ed inviarlo.
 
