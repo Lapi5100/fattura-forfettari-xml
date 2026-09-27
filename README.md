@@ -2,7 +2,7 @@
 
 Questa è una applicazione desktop, creata con AI, nata per gestire le mie fatture elettroniche nella maniera semplice e veloce, è in fase di sviluppo e può contenere errori. 
 
-L'applicazione generara fatture elettroniche in formato PDF e XML pronte per essere inviate all'Agenzia delle Entrate. Non utilizza il sistema SDI. Solo per professionisti in regime forfettario. Genera fatture per gli autonomi dello spettacolo con contribuzione exENPALS. 
+L'applicazione genera fatture elettroniche in formato PDF e XML pronte per essere inviate all'Agenzia delle Entrate. Non utilizza il sistema SDI. Solo per autonomi che aderiscono al regime forfettario. Genera fatture per professionisti alla gestione separata, per iscritti alle casse professionali e per gli autonomi dello spettacolo iscritti all'exENPALS. 
 
 Per windows scarica la cartella zip e scompattala dove vuoi. Avvia l'eseguibile per lanciare il programma.
 
