@@ -9,6 +9,11 @@ Per windows scarica la cartella zip e scompattala dove vuoi. Avvia l'eseguibile 
 Per linux scaricare l'eseguibile appimage per qualsiasi distribuzione.
 
 
+| File | Link |
+|------|------|
+| Windows | [Scarica](https://github.com/Lapi5100/fattura-forfettari-xml/releases/download/0.8.0/Fattura_Forfettario-win-x86_64.zip) |
+| Linux | [Scarica](https://github.com/Lapi5100/fattura-forfettari-xml/releases/download/0.8.0/Fattura_Forfettario-linux-x86_64.AppImage) |
+
 
 ## Struttura
 
