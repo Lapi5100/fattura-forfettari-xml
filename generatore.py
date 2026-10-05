@@ -121,6 +121,14 @@ def _euro(valore):
     return f"{valore:.2f}"
 
 
+def _euro_italiano(valore):
+    # Format with Italian conventions: point as thousands separator, comma as decimal
+    formatted = f"{valore:,.2f}"
+    # Replace comma with temporary marker, point with comma, then temporary marker with point
+    formatted = formatted.replace(",", "#").replace(".", ",").replace("#", ".")
+    return formatted
+
+
 class Generatore:
     @staticmethod
     def crea_xml(dati):
@@ -330,9 +338,9 @@ class Generatore:
             pdf.multi_cell(90, 5, r["desc"], 1, "L")
             h = pdf.get_y() - y
             pdf.set_xy(x + 90, y)
-            pdf.cell(20, h, _euro(r["qta"]), 1, 0, "C")
-            pdf.cell(22, h, f"Euro {_euro(r['prezzo'])}", 1, 0, "R")
-            pdf.cell(22, h, f"Euro {_euro(r['totale'])}", 1, 0, "R")
+            pdf.cell(20, h, _euro_italiano(r["qta"]), 1, 0, "C")
+            pdf.cell(22, h, f"Euro {_euro_italiano(r['prezzo'])}", 1, 0, "R")
+            pdf.cell(22, h, f"Euro {_euro_italiano(r['totale'])}", 1, 0, "R")
             pdf.cell(35, h, "Non soggette - altri casi", 1, 0, "L")
             pdf.ln()
 
@@ -341,7 +349,7 @@ class Generatore:
 
         def riga_totale(etichetta, importo):
             pdf.cell(145, 8, etichetta, 0, 0, "R")
-            pdf.cell(35, 8, f"Euro {_euro(importo)}", 0, 0, "R")
+            pdf.cell(35, 8, f"Euro {_euro_italiano(importo)}", 0, 0, "R")
             pdf.ln()
 
         riga_totale("Imponibile Competenza:", dati["imponibile_competenza"])
@@ -358,10 +366,9 @@ class Generatore:
             pdf.cell(180, 4, "MEF 17 GIUGNO 2014 (ART. 6)", 0, 1, "C")
             pdf.ln(2)
 
-        totale_senza_bollo = dati["imponibile_competenza"] - dati.get("ritenuta", 0)
         pdf.set_font("Arial", "B", 14)
         pdf.cell(145, 10, "TOTALE:", 0, 0, "R")
-        pdf.cell(35, 10, f"Euro {_euro(totale_senza_bollo)}", 0, 0, "R")
+        pdf.cell(35, 10, f"Euro {_euro_italiano(dati['totale_documento'])}", 0, 0, "R")
         pdf.ln(20)
 
         pdf.set_font("Arial", "B", 10)

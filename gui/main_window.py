@@ -19,8 +19,17 @@ from gui.dialogs import NuovoClienteDialog, ModificaRigaDialog
 from gui.styles import APP_STYLESHEET
 from utils.csv_exporter import CSVExporter
 
+
+def _formatta_importo(valore):
+    """Formatta un numero secondo le convenzioni italiane: punto come separatore delle migliaia, virgola per i decimali"""
+    formatted = f"{valore:,.2f}"
+    # Replace comma with temporary marker, point with comma, then temporary marker with point
+    formatted = formatted.replace(",", "#").replace(".", ",").replace("#", ".")
+    return formatted
+
 CARTELLA_FATTURE = "Fatture"
 LOGO_PATH = Path(__file__).resolve().parent.parent / "logo.png"
+HEADER_HEIGHT = 44
 
 
 def _row_get(row, key, default=""):
@@ -89,14 +98,30 @@ class MainWindow(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
         main_layout.setSpacing(6)
 
+        header_layout = QHBoxLayout()
+        header_layout.setSpacing(12)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+
         logo_label = QLabel()
         if LOGO_PATH.exists():
             pixmap = QPixmap(str(LOGO_PATH)).scaledToHeight(
-                40, Qt.TransformationMode.SmoothTransformation
+                HEADER_HEIGHT, Qt.TransformationMode.SmoothTransformation
             )
-            logo_label.setPixmap(pixmap)
-        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_layout.addWidget(logo_label)
+            if not pixmap.isNull():
+                logo_label.setPixmap(pixmap)
+        logo_label.setScaledContents(False)
+        logo_label.setFixedHeight(HEADER_HEIGHT)
+        logo_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
+        title_label = QLabel("Fattura Forfettari xml")
+        title_label.setObjectName("headerTitle")
+        title_label.setFixedHeight(HEADER_HEIGHT)
+        title_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
+        header_layout.addWidget(logo_label)
+        header_layout.addWidget(title_label)
+        header_layout.addStretch()
+        main_layout.addLayout(header_layout)
 
         main_layout.addWidget(self.create_config_group())
 
@@ -714,21 +739,19 @@ class MainWindow(QMainWindow):
             cassa_perc = self._perc_cassa()
             cassa = imp_competenza * (cassa_perc / 100.0) if cassa_perc > 0 else 0
 
-        bollo = 2.0 if imp_competenza > 77.47 else 0.0
-        totale = imp_competenza + rivalsa - ritenuta + cassa
-        if self.var_bollo_al_totale.isChecked():
-            totale += bollo
+        bollo = 2.0 if imp_competenza > 77.47 and self.var_bollo_al_totale.isChecked() else 0.0
+        totale = imp_competenza + rivalsa - ritenuta + cassa + bollo
 
         # Aggiornamento dell'etichetta con ritenuta se applicabile
         if self.is_lavoratore_spettacolo():
             self.lbl_totali.setText(
-                f"Imp.Competenza: {imp_competenza:.2f} | Rivalsa: {rivalsa:.2f} | "
-                f"Ritenuta RT03: {ritenuta:.2f} | Cassa: {cassa:.2f} | Bollo: {bollo:.2f} | TOTALE: {totale:.2f} EUR"
+                f"Imp.Competenza: {_formatta_importo(imp_competenza)} | Rivalsa: {_formatta_importo(rivalsa)} | "
+                f"Ritenuta RT03: {_formatta_importo(ritenuta)} | Cassa: {_formatta_importo(cassa)} | Bollo: {_formatta_importo(bollo)} | TOTALE: {_formatta_importo(totale)} EUR"
             )
         else:
             self.lbl_totali.setText(
-                f"Imp.Competenza: {imp_competenza:.2f} | Rivalsa: {rivalsa:.2f} | "
-                f"Cassa: {cassa:.2f} | Bollo: {bollo:.2f} | TOTALE: {totale:.2f} EUR"
+                f"Imp.Competenza: {_formatta_importo(imp_competenza)} | Rivalsa: {_formatta_importo(rivalsa)} | "
+                f"Cassa: {_formatta_importo(cassa)} | Bollo: {_formatta_importo(bollo)} | TOTALE: {_formatta_importo(totale)} EUR"
             )
         return imp_competenza, rivalsa, ritenuta, cassa, bollo, totale
 
@@ -814,10 +837,10 @@ class MainWindow(QMainWindow):
             tot_bollo += f[7] or 0
             tot_doc += f[8] or 0
 
-        self.lbl_totale_imponibile.setText(f"Imponibile: {tot_imp:.2f} €".replace(".", ","))
-        self.lbl_totale_cassa.setText(f"Cassa: {tot_cassa:.2f} €".replace(".", ","))
-        self.lbl_totale_bollo.setText(f"Bollo: {tot_bollo:.2f} €".replace(".", ","))
-        self.lbl_totale_documento.setText(f"Totale Documento: {tot_doc:.2f} €".replace(".", ","))
+        self.lbl_totale_imponibile.setText(f"Imponibile: {_formatta_importo(tot_imp)} €")
+        self.lbl_totale_cassa.setText(f"Cassa: {_formatta_importo(tot_cassa)} €")
+        self.lbl_totale_bollo.setText(f"Bollo: {_formatta_importo(tot_bollo)} €")
+        self.lbl_totale_documento.setText(f"Totale Documento: {_formatta_importo(tot_doc)} €")
 
     def _conferma_stato_invio(self, inviata):
         fattura = self._get_fattura_selezionata()

@@ -11,6 +11,11 @@ QGroupBox {
     color: #1E3A5F;
     background-color: #F0F7FF;
 }
+QLabel#headerTitle {
+    color: #0064FF;
+    font-size: 32px;
+    font-weight: bold;
+}
 QGroupBox::title {
     subcontrol-origin: margin;
     left: 10px;

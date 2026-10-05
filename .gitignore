@@ -1,0 +1,15 @@
+venv/
+Fatture/
+AGENTS.md
+__pycache__/
+*.pyc
+*.pyo
+*.sqlite
+*.sqlite-journal
+build/
+dist/
+dist_windows/
+*.backup
+*.spec.bak
+.DS_Store
+.pytest_cache/

@@ -1,12 +1,3 @@
+# Dipendenze runtime
 PyQt6>=6.4.0
 fpdf>=1.7.2
-
-sudo apt install python3-pip
-
-sudo apt install python3.12-venv
-
-sudo apt install -y libxcb-cursor0
-
-setup_venv.sh
-
-avvia.sh

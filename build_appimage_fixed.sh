@@ -29,6 +29,7 @@ pyinstaller --name="FatturaForfettario" \
     --add-data="utils:utils" \
     --add-data="generatore.py:." \
     --add-data="database.py:." \
+    --add-data="logo.png:." \
     --hidden-import=PyQt6.QtCore \
     --hidden-import=PyQt6.QtGui \
     --hidden-import=PyQt6.QtWidgets \
